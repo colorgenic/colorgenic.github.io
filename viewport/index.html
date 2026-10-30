@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <!-- viewport-fit=cover: 화면 가장자리까지 쓰도록 설정해야 safe-area(안전 영역) 값을 읽을 수 있습니다 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2f5bea">
+  <title>뷰포트 측정</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --card: #ffffff;
+      --text: #1b1f2a;
+      --muted: #6b7280;
+      --line: #e3e7ef;
+      --accent: #2f5bea;
+      --accent-soft: #e8eeff;
+      --warn: #d9480f;
+
+      /* 안전 영역 여백 (Safe Area Inset): 시스템 바에 가려지는 부분 */
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { margin: 0; }
+
+    body {
+      /* dvh(동적 뷰포트 높이): 탐색 방식·주소창 변화에 맞춰 자동으로 바뀌는 높이 */
+      min-height: 100dvh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Noto Sans KR", sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── 뷰포트 경계 표시: 점선 안쪽이 실제 앱 영역입니다 ── */
+    .viewport-frame {
+      position: fixed;
+      inset: 0;
+      border: 2px dashed var(--warn);
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    /* ── 상단 헤더: 상태 표시줄 높이만큼 위쪽 여백을 자동으로 줍니다 ── */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: calc(var(--safe-top) + 12px) calc(var(--safe-right) + 16px) 12px calc(var(--safe-left) + 16px);
+      background: var(--accent);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .app-header .title { flex: 1; min-width: 0; }
+    .app-header h1 { margin: 0; font-size: 17px; }
+    .app-header p { margin: 2px 0 0; font-size: 12px; opacity: .85; }
+    .app-header .meta { opacity: .7; font-size: 11px; font-variant-numeric: tabular-nums; }
+
+    /* 새로고침 버튼 */
+    .btn-reload {
+      flex: none;
+      padding: 8px 12px;
+      border: 1px solid rgba(255, 255, 255, .5);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .15);
+      color: #fff;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .btn-reload:active { background: rgba(255, 255, 255, .3); }
+
+    main {
+      padding: 16px calc(var(--safe-right) + 16px) calc(var(--safe-bottom) + 96px) calc(var(--safe-left) + 16px);
+      display: grid;
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .card h2 { margin: 0 0 10px; font-size: 14px; }
+
+    /* 핵심 수치 크게 보기 */
+    .hero {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      font-variant-numeric: tabular-nums;
+    }
+    .hero strong { font-size: 32px; letter-spacing: -0.5px; }
+    .hero span { color: var(--muted); }
+    .hero-sub { margin-top: 4px; color: var(--muted); font-size: 12px; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* 측정값 표 */
+    table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    th, td { padding: 7px 4px; border-bottom: 1px solid var(--line); text-align: right; font-size: 13px; }
+    th:first-child, td:first-child { text-align: left; }
+    thead th { color: var(--muted); font-weight: 500; font-size: 12px; }
+    tbody tr:last-child td { border-bottom: 0; }
+    td small { display: block; color: var(--muted); font-size: 11px; }
+
+    .help { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+
+    /* 기록 영역 */
+    .record-form { display: flex; gap: 8px; flex-wrap: wrap; }
+    select, button {
+      font: inherit;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+    }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+    .scroll-x { overflow-x: auto; margin-top: 10px; }
+    .diff { color: var(--warn); font-weight: 600; }
+    .empty { color: var(--muted); font-size: 12px; margin: 10px 0 0; }
+
+    /* ── 하단 고정 바: 내비게이션 바 높이만큼 아래쪽 여백을 자동으로 줍니다 ── */
+    .app-footer {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 10;
+      padding: 12px calc(var(--safe-right) + 16px) calc(var(--safe-bottom) + 12px) calc(var(--safe-left) + 16px);
+      background: #1b1f2a;
+      color: #fff;
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* 측정용 숨김 요소 (Probe, 탐침) */
+    .probe { position: fixed; left: 0; top: 0; width: 0; visibility: hidden; pointer-events: none; }
+    #probe-dvh { height: 100dvh; }
+    #probe-svh { height: 100svh; }
+    #probe-lvh { height: 100lvh; }
+    #probe-safe {
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      padding-left: env(safe-area-inset-left, 0px);
+      padding-right: env(safe-area-inset-right, 0px);
+    }
+  </style>
+</head>
+<body>
+  <div class="viewport-frame" aria-hidden="true"></div>
+
+  <header class="app-header">
+    <div class="title">
+      <h1>뷰포트 측정</h1>
+      <p id="mode-text">실행 방식 확인 중…</p>
+      <p class="meta" id="meta-text">-</p>
+    </div>
+    <button type="button" class="btn-reload" id="btn-reload">새로고침</button>
+  </header>
+
+  <main>
+    <!-- 1. 핵심 값 -->
+    <section class="card">
+      <h2>앱 영역 크기 (뷰포트, Viewport)</h2>
+      <div class="hero">
+        <strong id="hero-size">-</strong><span>CSS px (= dp)</span>
+      </div>
+      <div class="hero-sub" id="hero-px">실제 픽셀: -</div>
+      <p style="margin:10px 0 0">추정 탐색 방식: <span class="badge" id="nav-guess">-</span></p>
+    </section>
+
+    <!-- 2. 상세 값 -->
+    <section class="card">
+      <h2>상세 측정값</h2>
+      <table>
+        <thead><tr><th>항목</th><th>CSS px</th><th>실제 px</th></tr></thead>
+        <tbody id="detail-body"></tbody>
+      </table>
+      <p class="help">
+        주황색 점선 안쪽이 앱이 쓸 수 있는 영역입니다.<br>
+        "시스템 바 합계"는 화면 전체 높이에서 앱 영역 높이를 뺀 값으로, 상태 표시줄과 내비게이션 바를 합친 높이입니다.
+      </p>
+    </section>
+
+    <!-- 3. 탐색 방식별 기록 비교 -->
+    <section class="card">
+      <h2>탐색 방식별 기록 비교</h2>
+      <div class="record-form">
+        <select id="record-label">
+          <option value="동작 탐색 (제스처)">동작 탐색 (제스처)</option>
+          <option value="3버튼 탐색">3버튼 탐색</option>
+          <option value="2버튼 탐색">2버튼 탐색</option>
+          <option value="가로 화면">가로 화면</option>
+          <option value="기타">기타</option>
+        </select>
+        <button type="button" class="primary" id="btn-record">현재 값 기록</button>
+        <button type="button" id="btn-copy">텍스트 복사</button>
+        <button type="button" id="btn-clear">기록 지우기</button>
+      </div>
+      <div class="scroll-x">
+        <table>
+          <thead>
+            <tr><th>방식</th><th>너비</th><th>높이</th><th>위 여백</th><th>아래 여백</th><th>바 합계</th></tr>
+          </thead>
+          <tbody id="record-body"></tbody>
+        </table>
+      </div>
+      <p class="empty" id="record-empty">아직 기록이 없습니다. 탐색 방식을 바꿔가며 "현재 값 기록"을 눌러 보세요.</p>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <span>하단 고정 바</span>
+    <span id="footer-size">-</span>
+  </footer>
+
+  <!-- 측정용 숨김 요소 -->
+  <div class="probe" id="probe-dvh"></div>
+  <div class="probe" id="probe-svh"></div>
+  <div class="probe" id="probe-lvh"></div>
+  <div class="probe" id="probe-safe"></div>
+
+  <script>
+    // ─────────────────────────────────────────────
+    // 0. 버전 정보: 파일을 고쳐서 올릴 때 이 숫자를 바꾸면
+    //    화면 상단에서 최신 내용이 반영됐는지 확인할 수 있습니다
+    // ─────────────────────────────────────────────
+    const APP_VERSION = 'v1.1';
+
+    function $(id) { return document.getElementById(id); }
+
+    // 불러온 시각 표시 (예: v1.1 · 불러온 시각 14:05:32)
+    const loadedAt = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+    $('meta-text').textContent = `${APP_VERSION} · 불러온 시각 ${loadedAt}`;
+
+    // 새로고침 버튼: 주소 뒤에 매번 다른 값을 붙여 캐시를 건너뛰고 최신 파일을 받습니다
+    $('btn-reload').addEventListener('click', async () => {
+      $('btn-reload').textContent = '불러오는 중…';
+      try {
+        // 서비스 워커도 최신 버전이 있는지 확인
+        const reg = await navigator.serviceWorker?.getRegistration();
+        await reg?.update();
+      } catch (e) { /* 확인 실패해도 새로고침은 진행 */ }
+      location.replace(location.pathname + '?v=' + Date.now());
+    });
+
+    // 주소창이 보이는 경우를 위해, 다시 불러온 뒤 붙였던 ?v= 값은 주소에서 지웁니다
+    if (location.search.includes('v=')) {
+      history.replaceState(null, '', location.pathname);
+    }
+
+    // ─────────────────────────────────────────────
+    // 1. 측정 함수: 현재 화면의 각종 크기를 한 번에 모읍니다
+    // ─────────────────────────────────────────────
+
+    function measure() {
+      const safeStyle = getComputedStyle($('probe-safe'));
+      const vv = window.visualViewport;
+
+      return {
+        dpr: window.devicePixelRatio || 1,                 // 기기 픽셀 비율 (Device Pixel Ratio)
+        innerW: window.innerWidth,                          // 뷰포트 너비
+        innerH: window.innerHeight,                         // 뷰포트 높이
+        visualW: vv ? Math.round(vv.width) : null,          // 실제로 보이는 영역 (키보드 등 반영)
+        visualH: vv ? Math.round(vv.height) : null,
+        screenW: screen.width,                              // 기기 화면 전체
+        screenH: screen.height,
+        dvh: $('probe-dvh').offsetHeight,                   // 100dvh 실측
+        svh: $('probe-svh').offsetHeight,                   // 100svh 실측 (가장 작은 경우)
+        lvh: $('probe-lvh').offsetHeight,                   // 100lvh 실측 (가장 큰 경우)
+        safeTop: parseFloat(safeStyle.paddingTop) || 0,     // 위쪽 안전 영역 여백
+        safeBottom: parseFloat(safeStyle.paddingBottom) || 0,
+        safeLeft: parseFloat(safeStyle.paddingLeft) || 0,
+        safeRight: parseFloat(safeStyle.paddingRight) || 0,
+        standalone: matchMedia('(display-mode: standalone)').matches,
+        fullscreen: matchMedia('(display-mode: fullscreen)').matches,
+        landscape: matchMedia('(orientation: landscape)').matches
+      };
+    }
+
+    // ─────────────────────────────────────────────
+    // 2. 탐색 방식 추정
+    //    3버튼 바는 약 48dp, 동작 탐색 바는 약 16~24dp 정도로 높이가 다릅니다.
+    //    아래쪽 안전 영역 값이 있을 때만 추정이 가능합니다.
+    // ─────────────────────────────────────────────
+    function guessNav(m) {
+      if (m.landscape) return '가로 화면 (기록 비교로 확인)';
+      if (m.safeBottom > 0) {
+        return m.safeBottom >= 40 ? '3버튼 탐색 (추정)' : '동작 탐색 (추정)';
+      }
+      return '판단 불가 · 기록 비교로 확인';
+    }
+
+    function px(cssValue, dpr) { return Math.round(cssValue * dpr); }
+    function fmt(n) { return Number.isInteger(n) ? String(n) : n.toFixed(1); }
+
+    // ─────────────────────────────────────────────
+    // 3. 화면 표시
+    // ─────────────────────────────────────────────
+    function render() {
+      const m = measure();
+      const barTotal = m.screenH - m.innerH;
+
+      // 실행 방식 표시
+      $('mode-text').textContent = m.standalone
+        ? '설치된 앱(standalone)으로 실행 중 · 주소창 없음'
+        : m.fullscreen
+          ? '전체 화면(fullscreen)으로 실행 중'
+          : '브라우저 탭에서 실행 중 · 주소창 높이가 포함되지 않음';
+
+      $('hero-size').textContent = `${m.innerW} × ${m.innerH}`;
+      $('hero-px').textContent = `실제 픽셀: ${px(m.innerW, m.dpr)} × ${px(m.innerH, m.dpr)} px · 픽셀 비율 ${m.dpr}`;
+      $('nav-guess').textContent = guessNav(m);
+      $('footer-size').textContent = `${m.innerW} × ${m.innerH}`;
+
+      const rows = [
+        ['뷰포트 너비', 'innerWidth', m.innerW],
+        ['뷰포트 높이', 'innerHeight', m.innerH],
+        ['보이는 영역 높이', 'visualViewport', m.visualH],
+        ['화면 전체 너비', 'screen.width', m.screenW],
+        ['화면 전체 높이', 'screen.height', m.screenH],
+        ['시스템 바 합계', '전체 높이 − 뷰포트 높이', barTotal],
+        ['100dvh', '동적 높이', m.dvh],
+        ['100svh', '가장 작은 높이', m.svh],
+        ['100lvh', '가장 큰 높이', m.lvh],
+        ['위 안전 영역', 'safe-area-inset-top', m.safeTop],
+        ['아래 안전 영역', 'safe-area-inset-bottom', m.safeBottom],
+        ['왼쪽 / 오른쪽', 'safe-area-inset-left/right', `${fmt(m.safeLeft)} / ${fmt(m.safeRight)}`]
+      ];
+
+      $('detail-body').innerHTML = rows.map(([name, sub, val]) => {
+        const isNum = typeof val === 'number';
+        const css = val === null ? '-' : (isNum ? fmt(val) : val);
+        const real = isNum ? px(val, m.dpr) : '-';
+        return `<tr><td>${name}<small>${sub}</small></td><td>${css}</td><td>${real}</td></tr>`;
+      }).join('');
+
+      return m;
+    }
+
+    // ─────────────────────────────────────────────
+    // 4. 기록 저장 · 비교 (브라우저 저장소 localStorage 사용)
+    // ─────────────────────────────────────────────
+    const STORE_KEY = 'viewport-records';
+    let records = [];
+
+    function loadRecords() {
+      try { records = JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
+      catch (e) { records = []; }
+    }
+    function saveRecords() {
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(records)); }
+      catch (e) { /* 저장소를 쓸 수 없는 환경이면 화면에만 유지 */ }
+    }
+
+    function renderRecords() {
+      const body = $('record-body');
+      $('record-empty').style.display = records.length ? 'none' : 'block';
+
+      let html = records.map(r => `
+        <tr>
+          <td>${r.label}</td>
+          <td>${r.w}</td>
+          <td>${r.h}</td>
+          <td>${fmt(r.top)}</td>
+          <td>${fmt(r.bottom)}</td>
+          <td>${r.bar}</td>
+        </tr>`).join('');
+
+      // 기록이 2개 이상이면 처음과 마지막 기록의 차이를 보여줍니다
+      if (records.length >= 2) {
+        const a = records[0];
+        const b = records[records.length - 1];
+        const d = (x, y) => (y - x > 0 ? '+' : '') + fmt(y - x);
+        html += `
+        <tr class="diff">
+          <td>차이</td>
+          <td>${d(a.w, b.w)}</td>
+          <td>${d(a.h, b.h)}</td>
+          <td>${d(a.top, b.top)}</td>
+          <td>${d(a.bottom, b.bottom)}</td>
+          <td>${d(a.bar, b.bar)}</td>
+        </tr>`;
+      }
+      body.innerHTML = html;
+    }
+
+    $('btn-record').addEventListener('click', () => {
+      const m = measure();
+      records.push({
+        label: $('record-label').value,
+        w: m.innerW,
+        h: m.innerH,
+        top: m.safeTop,
+        bottom: m.safeBottom,
+        bar: m.screenH - m.innerH
+      });
+      saveRecords();
+      renderRecords();
+    });
+
+    $('btn-clear').addEventListener('click', () => {
+      records = [];
+      saveRecords();
+      renderRecords();
+    });
+
+    // 기록을 텍스트로 복사 (메모장이나 메신저에 붙여넣기 용)
+    $('btn-copy').addEventListener('click', async () => {
+      const m = measure();
+      const lines = [
+        `픽셀 비율: ${m.dpr} / 화면 전체: ${m.screenW}×${m.screenH}`,
+        '방식 | 너비 | 높이 | 위 여백 | 아래 여백 | 바 합계',
+        ...records.map(r => `${r.label} | ${r.w} | ${r.h} | ${fmt(r.top)} | ${fmt(r.bottom)} | ${r.bar}`)
+      ];
+      const text = lines.join('\n');
+      try {
+        await navigator.clipboard.writeText(text);
+        alert('복사했습니다.');
+      } catch (e) {
+        prompt('아래 내용을 길게 눌러 복사하세요.', text);
+      }
+    });
+
+    // ─────────────────────────────────────────────
+    // 5. 화면 크기가 바뀔 때마다 다시 측정
+    //    (탐색 방식 변경, 화면 회전, 키보드 표시 등)
+    // ─────────────────────────────────────────────
+    let timer;
+    function scheduleRender() {
+      clearTimeout(timer);
+      timer = setTimeout(render, 80);
+    }
+    window.addEventListener('resize', scheduleRender);
+    window.addEventListener('orientationchange', scheduleRender);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', scheduleRender);
+    document.addEventListener('visibilitychange', scheduleRender);
+
+    loadRecords();
+    render();
+    renderRecords();
+
+    // 서비스 워커 등록: 앱 설치가 가능하도록 합니다
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>
