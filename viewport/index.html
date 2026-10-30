@@ -18,6 +18,9 @@
       --accent: #2f5bea;
       --accent-soft: #e8eeff;
       --warn: #d9480f;
+      --warn-soft: #fff0e6;
+      --ok: #1a7f37;
+      --ok-soft: #e6f4ea;
 
       /* 안전 영역 여백 (Safe Area Inset): 시스템 바에 가려지는 부분 */
       --safe-top: env(safe-area-inset-top, 0px);
@@ -38,6 +41,12 @@
       font-family: system-ui, -apple-system, "Noto Sans KR", sans-serif;
       font-size: 14px;
       line-height: 1.5;
+    }
+
+    code {
+      font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+      font-size: 12px;
+      word-break: break-all;
     }
 
     /* ── 뷰포트 경계 표시: 점선 안쪽이 실제 앱 영역입니다 ── */
@@ -91,6 +100,7 @@
       border: 1px solid var(--line);
       border-radius: 12px;
       padding: 14px 16px;
+      min-width: 0;
     }
     .card h2 { margin: 0 0 10px; font-size: 14px; }
 
@@ -98,12 +108,15 @@
     .hero {
       display: flex;
       align-items: baseline;
+      flex-wrap: wrap;
       gap: 6px;
       font-variant-numeric: tabular-nums;
     }
     .hero strong { font-size: 32px; letter-spacing: -0.5px; }
     .hero span { color: var(--muted); }
     .hero-sub { margin-top: 4px; color: var(--muted); font-size: 12px; }
+
+    .info-row { margin: 8px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 
     .badge {
       display: inline-block;
@@ -113,31 +126,106 @@
       color: var(--accent);
       font-size: 12px;
       font-weight: 600;
+      white-space: nowrap;
     }
+    .badge.ok { background: var(--ok-soft); color: var(--ok); }
+    .badge.no { background: #f1f2f5; color: var(--muted); }
+    .badge.warn { background: var(--warn-soft); color: var(--warn); }
 
-    /* 측정값 표 */
+    /* 표 */
     table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
     th, td { padding: 7px 4px; border-bottom: 1px solid var(--line); text-align: right; font-size: 13px; }
     th:first-child, td:first-child { text-align: left; }
-    thead th { color: var(--muted); font-weight: 500; font-size: 12px; }
+    thead th { color: var(--muted); font-weight: 500; font-size: 12px; white-space: nowrap; }
     tbody tr:last-child td { border-bottom: 0; }
     td small { display: block; color: var(--muted); font-size: 11px; }
 
     .help { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
 
-    /* 기록 영역 */
-    .record-form { display: flex; gap: 8px; flex-wrap: wrap; }
-    select, button {
+    /* ── 미디어쿼리 판정 목록 ── */
+    .mq-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+    .mq-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+    .mq-item.is-match { border-color: var(--warn); background: var(--warn-soft); }
+    .mq-id {
+      flex: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      background: var(--text);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .mq-body { flex: 1; min-width: 0; }
+    .mq-body strong { display: block; font-size: 13px; }
+    .mq-body code { color: var(--muted); }
+    .mq-result { flex: none; }
+
+    /* ── .layout 데모 ──
+       아래 미디어쿼리는 위 "미디어쿼리 판정"의 A·B·C와 같은 조건입니다.
+       조건을 바꿀 때는 CSS와 스크립트의 QUERIES 두 곳을 함께 바꿔 주세요. */
+    .demo-track {
+      padding: 6px;
+      border-radius: 8px;
+      background: repeating-linear-gradient(135deg, #f1f3f8 0 6px, #e8ebf2 6px 12px);
+      display: grid;
+      gap: 6px;
+    }
+    .layout {
+      width: 100%;               /* 기본 너비 (compact) */
+      padding: 8px 10px;
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 600;
+      transition: width .2s;
+    }
+    .layout::after { content: " · 기본 너비 (100%)"; font-weight: 400; }
+
+    /* A: 기존 비율 방식 */
+    @media (min-width: 600px) and (max-aspect-ratio: 2/1) {
+      .layout.layout-a { width: 65%; border-color: var(--warn); background: var(--warn-soft); color: var(--warn); }
+      .layout.layout-a::after { content: " · medium 레이아웃 (65%)"; }
+    }
+    /* B: 안드로이드 기준 (높이 compact 제외) */
+    @media (min-width: 600px) and (min-height: 480px) {
+      .layout.layout-b { width: 65%; border-color: var(--warn); background: var(--warn-soft); color: var(--warn); }
+      .layout.layout-b::after { content: " · medium 레이아웃 (65%)"; }
+    }
+    /* C: 여유 기준 */
+    @media (min-width: 600px) and (min-height: 520px) {
+      .layout.layout-c { width: 65%; border-color: var(--warn); background: var(--warn-soft); color: var(--warn); }
+      .layout.layout-c::after { content: " · medium 레이아웃 (65%)"; }
+    }
+
+    /* ── 기록 영역 ── */
+    .record-form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .record-form label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+    .record-actions { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
+    input, select, button {
       font: inherit;
       padding: 8px 12px;
       border-radius: 8px;
       border: 1px solid var(--line);
       background: #fff;
       color: var(--text);
+      min-width: 0;
     }
     button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
     .scroll-x { overflow-x: auto; margin-top: 10px; }
-    .diff { color: var(--warn); font-weight: 600; }
+    .scroll-x table { min-width: 560px; }
+    .record-del { padding: 2px 8px; font-size: 12px; color: var(--muted); }
     .empty { color: var(--muted); font-size: 12px; margin: 10px 0 0; }
 
     /* ── 하단 고정 바: 내비게이션 바 높이만큼 아래쪽 여백을 자동으로 줍니다 ── */
@@ -189,10 +277,41 @@
         <strong id="hero-size">-</strong><span>CSS px (= dp)</span>
       </div>
       <div class="hero-sub" id="hero-px">실제 픽셀: -</div>
-      <p style="margin:10px 0 0">추정 탐색 방식: <span class="badge" id="nav-guess">-</span></p>
+      <p class="info-row">
+        창 크기 클래스:
+        <span class="badge" id="class-w">-</span>
+        <span class="badge" id="class-h">-</span>
+      </p>
+      <p class="info-row">
+        비율·방향:
+        <span class="badge no" id="ratio-text">-</span>
+        <span class="badge no" id="orient-text">-</span>
+      </p>
+      <p class="info-row">
+        탐색 방식(참고용 추정):
+        <span class="badge no" id="nav-guess">-</span>
+      </p>
     </section>
 
-    <!-- 2. 상세 값 -->
+    <!-- 2. 미디어쿼리 판정 -->
+    <section class="card">
+      <h2>미디어쿼리 판정</h2>
+      <ul class="mq-list" id="mq-list"></ul>
+      <p class="help">주황색으로 표시된 조건이 지금 적용 중인 조건입니다. 화면을 돌리거나 탐색 방식을 바꾸면 바로 다시 판정합니다.</p>
+    </section>
+
+    <!-- 3. .layout 데모 (CSS 미디어쿼리만으로 동작) -->
+    <section class="card">
+      <h2>.layout 데모 (CSS만으로 동작)</h2>
+      <div class="demo-track">
+        <div class="layout layout-a">A 비율</div>
+        <div class="layout layout-b">B 높이 480</div>
+        <div class="layout layout-c">C 높이 520</div>
+      </div>
+      <p class="help">세 박스는 자바스크립트 없이 CSS 미디어쿼리로만 너비가 바뀝니다. 위의 판정 결과와 박스 너비가 같은지 확인해 보세요.</p>
+    </section>
+
+    <!-- 4. 상세 값 -->
     <section class="card">
       <h2>상세 측정값</h2>
       <table>
@@ -201,34 +320,45 @@
       </table>
       <p class="help">
         주황색 점선 안쪽이 앱이 쓸 수 있는 영역입니다.<br>
-        "시스템 바 합계"는 화면 전체 높이에서 앱 영역 높이를 뺀 값으로, 상태 표시줄과 내비게이션 바를 합친 높이입니다.
+        "시스템 바 합계"는 화면 전체에서 앱 영역을 뺀 값으로, 세로·가로 방향으로 각각 표시합니다.
       </p>
     </section>
 
-    <!-- 3. 탐색 방식별 기록 비교 -->
+    <!-- 5. 기기·조합별 기록 -->
     <section class="card">
-      <h2>탐색 방식별 기록 비교</h2>
+      <h2>기기·조합별 기록</h2>
       <div class="record-form">
-        <select id="record-label">
-          <option value="동작 탐색 (제스처)">동작 탐색 (제스처)</option>
-          <option value="3버튼 탐색">3버튼 탐색</option>
-          <option value="2버튼 탐색">2버튼 탐색</option>
-          <option value="가로 화면">가로 화면</option>
-          <option value="기타">기타</option>
-        </select>
-        <button type="button" class="primary" id="btn-record">현재 값 기록</button>
-        <button type="button" id="btn-copy">텍스트 복사</button>
-        <button type="button" id="btn-clear">기록 지우기</button>
+        <label>기기 이름
+          <input type="text" id="record-device" placeholder="예: S23, Pixel 8">
+        </label>
+        <label>방향·탐색 방식
+          <select id="record-label">
+            <option value="세로·제스처">세로·제스처</option>
+            <option value="세로·3버튼">세로·3버튼</option>
+            <option value="가로·제스처">가로·제스처</option>
+            <option value="가로·3버튼">가로·3버튼</option>
+            <option value="기타">기타</option>
+          </select>
+        </label>
+        <div class="record-actions">
+          <button type="button" class="primary" id="btn-record">현재 값 기록</button>
+          <button type="button" id="btn-copy">텍스트 복사</button>
+          <button type="button" id="btn-clear">전체 지우기</button>
+        </div>
       </div>
       <div class="scroll-x">
         <table>
           <thead>
-            <tr><th>방식</th><th>너비</th><th>높이</th><th>위 여백</th><th>아래 여백</th><th>바 합계</th></tr>
+            <tr>
+              <th>기기 · 조합</th><th>너비</th><th>높이</th><th>비율</th><th>DPR</th>
+              <th>A</th><th>B</th><th>C</th><th></th>
+            </tr>
           </thead>
           <tbody id="record-body"></tbody>
         </table>
       </div>
-      <p class="empty" id="record-empty">아직 기록이 없습니다. 탐색 방식을 바꿔가며 "현재 값 기록"을 눌러 보세요.</p>
+      <p class="empty" id="record-empty">아직 기록이 없습니다. 기기 이름과 조합을 고른 뒤 "현재 값 기록"을 눌러 보세요.</p>
+      <p class="help">"텍스트 복사" 결과의 너비·높이·DPR(픽셀 비율)을 크롬 개발자 도구 <b>설정 → Devices → Add custom device</b>에 그대로 입력하면 됩니다. 기기 유형은 Mobile로 고르세요.</p>
     </section>
   </main>
 
@@ -248,11 +378,19 @@
     // 0. 버전 정보: 파일을 고쳐서 올릴 때 이 숫자를 바꾸면
     //    화면 상단에서 최신 내용이 반영됐는지 확인할 수 있습니다
     // ─────────────────────────────────────────────
-    const APP_VERSION = 'v1.1';
+    const APP_VERSION = 'v1.2';
+
+    // 판정할 미디어쿼리 목록
+    // CSS의 .layout-a / -b / -c 미디어쿼리와 같은 조건으로 맞춰 두세요
+    const QUERIES = [
+      { id: 'A', name: '기존 · 비율 기준',     query: '(min-width: 600px) and (max-aspect-ratio: 2/1)' },
+      { id: 'B', name: '안드로이드 기준 (480)', query: '(min-width: 600px) and (min-height: 480px)' },
+      { id: 'C', name: '여유 기준 (520)',       query: '(min-width: 600px) and (min-height: 520px)' }
+    ];
 
     function $(id) { return document.getElementById(id); }
 
-    // 불러온 시각 표시 (예: v1.1 · 불러온 시각 14:05:32)
+    // 불러온 시각 표시
     const loadedAt = new Date().toLocaleTimeString('ko-KR', { hour12: false });
     $('meta-text').textContent = `${APP_VERSION} · 불러온 시각 ${loadedAt}`;
 
@@ -260,14 +398,13 @@
     $('btn-reload').addEventListener('click', async () => {
       $('btn-reload').textContent = '불러오는 중…';
       try {
-        // 서비스 워커도 최신 버전이 있는지 확인
         const reg = await navigator.serviceWorker?.getRegistration();
         await reg?.update();
       } catch (e) { /* 확인 실패해도 새로고침은 진행 */ }
       location.replace(location.pathname + '?v=' + Date.now());
     });
 
-    // 주소창이 보이는 경우를 위해, 다시 불러온 뒤 붙였던 ?v= 값은 주소에서 지웁니다
+    // 다시 불러온 뒤 붙였던 ?v= 값은 주소에서 지웁니다
     if (location.search.includes('v=')) {
       history.replaceState(null, '', location.pathname);
     }
@@ -275,7 +412,6 @@
     // ─────────────────────────────────────────────
     // 1. 측정 함수: 현재 화면의 각종 크기를 한 번에 모읍니다
     // ─────────────────────────────────────────────
-
     function measure() {
       const safeStyle = getComputedStyle($('probe-safe'));
       const vv = window.visualViewport;
@@ -284,70 +420,105 @@
         dpr: window.devicePixelRatio || 1,                 // 기기 픽셀 비율 (Device Pixel Ratio)
         innerW: window.innerWidth,                          // 뷰포트 너비
         innerH: window.innerHeight,                         // 뷰포트 높이
-        visualW: vv ? Math.round(vv.width) : null,          // 실제로 보이는 영역 (키보드 등 반영)
-        visualH: vv ? Math.round(vv.height) : null,
+        visualH: vv ? Math.round(vv.height) : null,         // 실제로 보이는 영역 (키보드 등 반영)
         screenW: screen.width,                              // 기기 화면 전체
         screenH: screen.height,
         dvh: $('probe-dvh').offsetHeight,                   // 100dvh 실측
         svh: $('probe-svh').offsetHeight,                   // 100svh 실측 (가장 작은 경우)
         lvh: $('probe-lvh').offsetHeight,                   // 100lvh 실측 (가장 큰 경우)
-        safeTop: parseFloat(safeStyle.paddingTop) || 0,     // 위쪽 안전 영역 여백
+        safeTop: parseFloat(safeStyle.paddingTop) || 0,     // 안전 영역 여백
         safeBottom: parseFloat(safeStyle.paddingBottom) || 0,
         safeLeft: parseFloat(safeStyle.paddingLeft) || 0,
         safeRight: parseFloat(safeStyle.paddingRight) || 0,
         standalone: matchMedia('(display-mode: standalone)').matches,
         fullscreen: matchMedia('(display-mode: fullscreen)').matches,
-        landscape: matchMedia('(orientation: landscape)').matches
+        landscape: matchMedia('(orientation: landscape)').matches,
+        // 미디어쿼리 판정 결과 { A: true, B: false, ... }
+        mq: Object.fromEntries(QUERIES.map(q => [q.id, matchMedia(q.query).matches]))
       };
     }
 
     // ─────────────────────────────────────────────
-    // 2. 탐색 방식 추정
-    //    3버튼 바는 약 48dp, 동작 탐색 바는 약 16~24dp 정도로 높이가 다릅니다.
-    //    아래쪽 안전 영역 값이 있을 때만 추정이 가능합니다.
+    // 2. 창 크기 클래스 (안드로이드 Window Size Class 기준)
+    //    너비: compact < 600 ≤ medium < 840 ≤ expanded
+    //    높이: compact < 480 ≤ medium < 900 ≤ expanded
+    // ─────────────────────────────────────────────
+    function widthClass(w) { return w < 600 ? 'compact' : w < 840 ? 'medium' : 'expanded'; }
+    function heightClass(h) { return h < 480 ? 'compact' : h < 900 ? 'medium' : 'expanded'; }
+
+    // ─────────────────────────────────────────────
+    // 3. 탐색 방식 추정 (참고용)
+    //    바 크기는 기기마다 달라서 정확하지 않을 수 있습니다
     // ─────────────────────────────────────────────
     function guessNav(m) {
-      if (m.landscape) return '가로 화면 (기록 비교로 확인)';
-      if (m.safeBottom > 0) {
-        return m.safeBottom >= 40 ? '3버튼 탐색 (추정)' : '동작 탐색 (추정)';
-      }
-      return '판단 불가 · 기록 비교로 확인';
+      const side = Math.max(m.safeLeft, m.safeRight);
+      if (m.landscape && side >= 40) return '3버튼 (옆쪽 바)';
+      if (m.safeBottom >= 40) return '3버튼';
+      if (m.safeBottom > 0) return '제스처';
+      return '판단 불가 · 기록으로 확인';
     }
 
     function px(cssValue, dpr) { return Math.round(cssValue * dpr); }
     function fmt(n) { return Number.isInteger(n) ? String(n) : n.toFixed(1); }
+    function ratio(w, h) { return (w / h).toFixed(2); }
+    function mark(v) { return v ? '✓' : '✗'; }
 
     // ─────────────────────────────────────────────
-    // 3. 화면 표시
+    // 4. 화면 표시
     // ─────────────────────────────────────────────
     function render() {
       const m = measure();
-      const barTotal = m.screenH - m.innerH;
 
-      // 실행 방식 표시
       $('mode-text').textContent = m.standalone
         ? '설치된 앱(standalone)으로 실행 중 · 주소창 없음'
         : m.fullscreen
           ? '전체 화면(fullscreen)으로 실행 중'
-          : '브라우저 탭에서 실행 중 · 주소창 높이가 포함되지 않음';
+          : '브라우저 탭에서 실행 중 · 주소창 높이가 빠진 값';
 
       $('hero-size').textContent = `${m.innerW} × ${m.innerH}`;
       $('hero-px').textContent = `실제 픽셀: ${px(m.innerW, m.dpr)} × ${px(m.innerH, m.dpr)} px · 픽셀 비율 ${m.dpr}`;
-      $('nav-guess').textContent = guessNav(m);
       $('footer-size').textContent = `${m.innerW} × ${m.innerH}`;
 
+      // 창 크기 클래스
+      const wc = widthClass(m.innerW);
+      const hc = heightClass(m.innerH);
+      $('class-w').textContent = `너비 ${wc}`;
+      $('class-h').textContent = `높이 ${hc}`;
+      $('class-h').className = 'badge' + (hc === 'compact' ? ' warn' : '');
+
+      // 비율·방향
+      const r = ratio(m.innerW, m.innerH);
+      $('ratio-text').textContent = `비율 ${r} ${r > 2 ? '> 2' : '≤ 2'}`;
+      $('orient-text').textContent = m.landscape ? '가로 (landscape)' : '세로 (portrait)';
+      $('nav-guess').textContent = guessNav(m);
+
+      // 미디어쿼리 판정
+      $('mq-list').innerHTML = QUERIES.map(q => {
+        const on = m.mq[q.id];
+        return `
+          <li class="mq-item${on ? ' is-match' : ''}">
+            <span class="mq-id">${q.id}</span>
+            <div class="mq-body">
+              <strong>${q.name}</strong>
+              <code>${q.query}</code>
+            </div>
+            <span class="mq-result badge ${on ? 'warn' : 'no'}">${on ? '✓ 65%' : '✗ 기본'}</span>
+          </li>`;
+      }).join('');
+
+      // 상세 값
       const rows = [
         ['뷰포트 너비', 'innerWidth', m.innerW],
         ['뷰포트 높이', 'innerHeight', m.innerH],
         ['보이는 영역 높이', 'visualViewport', m.visualH],
         ['화면 전체 너비', 'screen.width', m.screenW],
         ['화면 전체 높이', 'screen.height', m.screenH],
-        ['시스템 바 합계', '전체 높이 − 뷰포트 높이', barTotal],
+        ['세로 방향 바 합계', '화면 높이 − 뷰포트 높이', m.screenH - m.innerH],
+        ['가로 방향 바 합계', '화면 너비 − 뷰포트 너비', m.screenW - m.innerW],
         ['100dvh', '동적 높이', m.dvh],
         ['100svh', '가장 작은 높이', m.svh],
         ['100lvh', '가장 큰 높이', m.lvh],
-        ['위 안전 영역', 'safe-area-inset-top', m.safeTop],
-        ['아래 안전 영역', 'safe-area-inset-bottom', m.safeBottom],
+        ['위 / 아래 안전 영역', 'safe-area-inset-top/bottom', `${fmt(m.safeTop)} / ${fmt(m.safeBottom)}`],
         ['왼쪽 / 오른쪽', 'safe-area-inset-left/right', `${fmt(m.safeLeft)} / ${fmt(m.safeRight)}`]
       ];
 
@@ -362,79 +533,92 @@
     }
 
     // ─────────────────────────────────────────────
-    // 4. 기록 저장 · 비교 (브라우저 저장소 localStorage 사용)
+    // 5. 기록 저장 · 비교 (브라우저 저장소 localStorage 사용)
     // ─────────────────────────────────────────────
-    const STORE_KEY = 'viewport-records';
+    const STORE_KEY = 'viewport-records-v2';
+    const DEVICE_KEY = 'viewport-device-name';
     let records = [];
 
-    function loadRecords() {
-      try { records = JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
-      catch (e) { records = []; }
+    function storageGet(key, fallback) {
+      try { const v = localStorage.getItem(key); return v === null ? fallback : v; }
+      catch (e) { return fallback; }
     }
-    function saveRecords() {
-      try { localStorage.setItem(STORE_KEY, JSON.stringify(records)); }
-      catch (e) { /* 저장소를 쓸 수 없는 환경이면 화면에만 유지 */ }
+    function storageSet(key, value) {
+      try { localStorage.setItem(key, value); } catch (e) { /* 저장 불가 환경이면 화면에만 유지 */ }
+    }
+
+    function loadRecords() {
+      try { records = JSON.parse(storageGet(STORE_KEY, '[]')) || []; }
+      catch (e) { records = []; }
+      $('record-device').value = storageGet(DEVICE_KEY, '');
+    }
+    function saveRecords() { storageSet(STORE_KEY, JSON.stringify(records)); }
+
+    // 화면에 넣을 글자에서 HTML 기호를 안전하게 바꿉니다
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
 
     function renderRecords() {
-      const body = $('record-body');
       $('record-empty').style.display = records.length ? 'none' : 'block';
-
-      let html = records.map(r => `
+      $('record-body').innerHTML = records.map((r, i) => `
         <tr>
-          <td>${r.label}</td>
+          <td>${escapeHtml(r.device || '-')}<small>${escapeHtml(r.label)}</small></td>
           <td>${r.w}</td>
           <td>${r.h}</td>
-          <td>${fmt(r.top)}</td>
-          <td>${fmt(r.bottom)}</td>
-          <td>${r.bar}</td>
+          <td>${ratio(r.w, r.h)}</td>
+          <td>${r.dpr}</td>
+          ${QUERIES.map(q => `<td>${mark(r.mq[q.id])}</td>`).join('')}
+          <td><button type="button" class="record-del" data-index="${i}">삭제</button></td>
         </tr>`).join('');
-
-      // 기록이 2개 이상이면 처음과 마지막 기록의 차이를 보여줍니다
-      if (records.length >= 2) {
-        const a = records[0];
-        const b = records[records.length - 1];
-        const d = (x, y) => (y - x > 0 ? '+' : '') + fmt(y - x);
-        html += `
-        <tr class="diff">
-          <td>차이</td>
-          <td>${d(a.w, b.w)}</td>
-          <td>${d(a.h, b.h)}</td>
-          <td>${d(a.top, b.top)}</td>
-          <td>${d(a.bottom, b.bottom)}</td>
-          <td>${d(a.bar, b.bar)}</td>
-        </tr>`;
-      }
-      body.innerHTML = html;
     }
+
+    $('record-device').addEventListener('change', () => {
+      storageSet(DEVICE_KEY, $('record-device').value.trim());
+    });
 
     $('btn-record').addEventListener('click', () => {
       const m = measure();
       records.push({
+        device: $('record-device').value.trim(),
         label: $('record-label').value,
         w: m.innerW,
         h: m.innerH,
-        top: m.safeTop,
-        bottom: m.safeBottom,
-        bar: m.screenH - m.innerH
+        dpr: m.dpr,
+        mq: m.mq
       });
+      storageSet(DEVICE_KEY, $('record-device').value.trim());
+      saveRecords();
+      renderRecords();
+    });
+
+    // 한 줄 삭제
+    $('record-body').addEventListener('click', (e) => {
+      const btn = e.target.closest('.record-del');
+      if (!btn) return;
+      records.splice(Number(btn.dataset.index), 1);
       saveRecords();
       renderRecords();
     });
 
     $('btn-clear').addEventListener('click', () => {
+      if (!confirm('기록을 모두 지울까요?')) return;
       records = [];
       saveRecords();
       renderRecords();
     });
 
-    // 기록을 텍스트로 복사 (메모장이나 메신저에 붙여넣기 용)
+    // 개발자 도구 사용자 기기 등록용 텍스트로 복사
     $('btn-copy').addEventListener('click', async () => {
-      const m = measure();
       const lines = [
-        `픽셀 비율: ${m.dpr} / 화면 전체: ${m.screenW}×${m.screenH}`,
-        '방식 | 너비 | 높이 | 위 여백 | 아래 여백 | 바 합계',
-        ...records.map(r => `${r.label} | ${r.w} | ${r.h} | ${fmt(r.top)} | ${fmt(r.bottom)} | ${r.bar}`)
+        '[개발자 도구 Add custom device 입력용]',
+        '이름 | 너비 | 높이 | DPR | 판정',
+        ...records.map(r => {
+          const judge = QUERIES.map(q => `${q.id}${mark(r.mq[q.id])}`).join(' ');
+          return `${r.device || '기기'} ${r.label} | ${r.w} | ${r.h} | ${r.dpr} | ${judge}`;
+        }),
+        '',
+        ...QUERIES.map(q => `${q.id}: ${q.query}`)
       ];
       const text = lines.join('\n');
       try {
@@ -446,7 +630,7 @@
     });
 
     // ─────────────────────────────────────────────
-    // 5. 화면 크기가 바뀔 때마다 다시 측정
+    // 6. 화면 크기가 바뀔 때마다 다시 측정
     //    (탐색 방식 변경, 화면 회전, 키보드 표시 등)
     // ─────────────────────────────────────────────
     let timer;
@@ -458,6 +642,8 @@
     window.addEventListener('orientationchange', scheduleRender);
     if (window.visualViewport) window.visualViewport.addEventListener('resize', scheduleRender);
     document.addEventListener('visibilitychange', scheduleRender);
+    // 미디어쿼리 결과가 바뀌는 순간에도 다시 판정
+    QUERIES.forEach(q => matchMedia(q.query).addEventListener('change', scheduleRender));
 
     loadRecords();
     render();
